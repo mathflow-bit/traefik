@@ -1,0 +1,23 @@
+# Traefik / ACME
+letsencrypt/
+acme.json
+
+# Environment files
+.env
+*.env
+
+# Docker
+docker-compose.override.yml
+
+# OS / editors
+.DS_Store
+.vscode/
+.idea/
+
+# Dependencies
+node_modules/
+
+# Keys / certs
+*.pem
+*.key
+*.crt

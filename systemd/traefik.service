@@ -1,0 +1,19 @@
+[Unit]
+Description=Traefik (Docker Compose)
+Documentation=https://doc.traefik.io/traefik/
+Requires=docker.service
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=/home/debian/proxy
+Environment=COMPOSE_PROJECT_NAME=traefik
+ExecStart=/usr/bin/docker compose -f docker-compose.yml up -d
+ExecStop=/usr/bin/docker compose -f docker-compose.yml down --remove-orphans
+TimeoutStartSec=0
+# Restart handled by systemctl via enable; keep service considered active after ExecStart
+
+[Install]
+WantedBy=multi-user.target
