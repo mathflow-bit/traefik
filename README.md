@@ -1,4 +1,4 @@
-# Traefik 3.5 — Reverse Proxy with TLS (English)
+# Traefik 3.5 — Reverse Proxy with TLS
 
 This repository contains a server-agnostic Traefik setup (Docker + Docker Compose) to run Traefik as a reverse proxy for multiple Docker services with automated TLS via Let's Encrypt. The README below is concise and avoids duplication — it shows what to change for your server and how to run/validate the setup.
 
@@ -11,10 +11,9 @@ proxy/
 │   └── traefik.yml             # static Traefik configuration (uses /certs/acme.json)
 ├── certs/                      # host directory mounted into container at /certs (contains acme.json)
 │   └── acme.json               # ACME storage (DO NOT commit)
-└── example-site/               # example app
-    ├── docker-compose.yml
-    └── html/
-        └── index.html
+├── .env                        # environment variables (LETSENCRYPT_EMAIL, CERTS_DIR, DASHBOARD_HOST, etc.)
+├── systemd/
+│   └── traefik.service         # example systemd unit file (edit WorkingDirectory)
 ```
 
 Summary
