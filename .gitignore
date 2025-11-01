@@ -1,5 +1,5 @@
 # Traefik / ACME
-letsencrypt/
+certs/
 acme.json
 
 # Environment files

@@ -1,238 +1,158 @@
-# Traefik 3.5 Reverse Proxy с SSL
+# Traefik 3.5 — Reverse Proxy with TLS (English)
 
-Полная настройка Traefik v3.5 как обратного прокси для множества Docker контейнеров с автоматическим получением SSL сертификатов от Let's Encrypt.
+This repository contains a server-agnostic Traefik setup (Docker + Docker Compose) to run Traefik as a reverse proxy for multiple Docker services with automated TLS via Let's Encrypt. The README below is concise and avoids duplication — it shows what to change for your server and how to run/validate the setup.
 
-## 📋 Структура проекта
+Project structure (example)
 
 ```
 proxy/
-├── docker-compose.yml          # Основной compose файл Traefik
+├── docker-compose.yml          # main Traefik compose file (reads variables from .env)
 ├── config/
-│   └── traefik.yml            # Статическая конфигурация
-├── letsencrypt/
-│   └── acme.json              # Хранилище SSL сертификатов
-└── example-site/              # Пример сайта
-    ├── docker-compose.yml     # Compose для примера
+│   └── traefik.yml             # static Traefik configuration (uses /certs/acme.json)
+├── certs/                      # host directory mounted into container at /certs (contains acme.json)
+│   └── acme.json               # ACME storage (DO NOT commit)
+└── example-site/               # example app
+    ├── docker-compose.yml
     └── html/
         └── index.html
 ```
 
-## 🚀 Быстрый старт
+Summary
+- Quick Traefik setup for Linux servers running Docker
+- How to add services (Docker Compose labels)
+- Production tips (ACME, firewall, backups, dashboard security)
 
-### 1. Настройка Traefik
+Files to check before deploying
+- `docker-compose.yml` — main compose for Traefik (reads `.env`)
+- `config/traefik.yml` — static configuration (entryPoints, providers, ACME resolver)
+- `certs/` (or your configured `CERTS_DIR`) — directory to store ACME data (`acme.json`) — keep it out of git
 
-## Traefik reverse-proxy — универсальное руководство
+## Requirements
+- Docker Engine (>= 20.10) and Docker Compose v2 (or integrated `docker compose`)
+- Ports 80 and 443 open on the server
+- For production: valid DNS A/AAAA records for each domain
 
-Этот репозиторий содержит конфигурацию Traefik (Docker + docker-compose) для использования как обратного прокси и автоматического получения TLS-сертификатов. README сделан максимально универсальным — с подсказками, какие поля и файлы менять, чтобы развернуть на любом сервере.
+Note on SELinux/AppArmor: if enabled, you may need to relabel volumes or place them in approved paths.
 
-Цель:
-- Быстрая настройка Traefik на любом Linux-сервере с Docker
-- Простая инструкция по добавлению сайтов (Docker Compose)
-- Подсказки для production (Let's Encrypt, firewall, бэкапы)
+## Variables (in `.env`)
+- `LETSENCRYPT_EMAIL` — email for Let's Encrypt registration and expiry notices
+- `CERTS_DIR` — host path mounted into the container at `/certs` (default: `./certs`)
+- `DASHBOARD_HOST` — hostname for the Traefik dashboard router (if exposed)
+- `BASICAUTH_USERS` — BasicAuth entries (htpasswd-style) for the dashboard (recommended)
 
-Файлы, на которые стоит обратить внимание:
-- `docker-compose.yml` — главный Compose для Traefik
-- `config/traefik.yml` — статическая конфигурация Traefik (entrypoints, providers и т.д.)
-- `letsencrypt/` или `acme/` — место для хранения ACME данных (`acme.json`)
-
-## Короткая «контракт»-инструкция (inputs / outputs)
-- Вход: домены (A/AAAA), корректные volume-пути, email для ACME
-- Выход: Traefik, предоставляющий HTTPS для сервисов, подключённых к Docker
-- Ошибки/режимы: staging vs production ACME, блокирующий firewall, неверные labels
-
-## 1 — Общие требования
-- Docker Engine (версия >= 20.10) и docker-compose v2 (или встроенный `docker compose`)
-- Доступ к портам 80 и 443 на сервере (проброшенные через firewall/облако)
-- Для production: валидные DNS A/AAAA записи для всех доменов
-
-Примечание по SELinux/AppArmor: при включённом SELinux могут потребоваться дополнительные разрешения для томов; в этом случае используйте relabel или разместите тома в разрешённых местах.
-
-## 2 — Переменные и настройки, которые нужно адаптировать
-- LETSENCRYPT_EMAIL — ваш email для Let's Encrypt
-- TRAEFIK_NETWORK — имя внешней сети Docker (по умолчанию `traefik`)
-- VOLUMES пути: проверьте, что пути к `letsencrypt`/`acme.json` и `config/` доступны и имеют корректные права
-- Dashboard: если вы открываете dashboard в интернет — обязательно настройте BasicAuth и ограничьте доступ по IP
-
-Пример минимальных ENV в `docker-compose.yml` (шаблон):
+Minimal `.env` example
 
 ```env
 LETSENCRYPT_EMAIL=you@example.com
-TRAEFIK_NETWORK=traefik
+CERTS_DIR=./certs
+DASHBOARD_HOST=dashboard.example.com
 ```
 
-## 3 — Как использовать на другом сервере (шаги)
-1) Скопируйте репозиторий или файлы на сервер.
-2) Убедитесь, что `docker` и `docker compose` установлены.
-3) Отредактируйте переменные: email, пути томов, имя сети.
-4) Создайте внешнюю сеть, если её нет:
+## Quick start (server-agnostic)
+1. Clone/copy repository to the server.
+2. Install `docker` and `docker compose`.
+3. Edit `.env` (set `LETSENCRYPT_EMAIL`, `CERTS_DIR`, `DASHBOARD_HOST`, etc.).
+4. If you use an external Docker network for Traefik and services, create it:
 
 ```bash
 docker network create traefik
 ```
 
-5) Запустите Traefik:
+5. Validate and start Traefik:
 
 ```bash
-docker compose up -d
+docker compose config   # validate (reads .env)
+docker compose up -d    # start
 ```
 
-6) Проверьте логи и статус:
+6. Check status and logs:
 
 ```bash
 docker compose ps
 docker compose logs -f traefik
 ```
 
-Если вы используете провайдер облака (DigitalOcean, AWS, GCP) — откройте 80/443 в соответствующей панели.
+## Creating and protecting the ACME file
+Traefik stores ACME data in `acme.json`. Create and secure it on the host (uses `CERTS_DIR`):
 
-## 4 — Как добавить сайт (универсально)
-Подключите сервис к внешней сети Traefik и добавьте метки (labels).
+```bash
+mkdir -p "${CERTS_DIR:-./certs}"
+touch "${CERTS_DIR:-./certs}/acme.json"
+chmod 600 "${CERTS_DIR:-./certs}/acme.json"
+```
 
-Обязательные минимальные labels:
+Do not commit `acme.json` to git. Keep backups and secure file ownership.
+
+## How to add a site
+Attach the service to the Traefik network and add labels in its Compose file:
 
 ```yaml
 labels:
   - "traefik.enable=true"
-  - "traefik.http.routers.SERVICE.rule=Host(`example.com`)"
-  - "traefik.http.routers.SERVICE.entrypoints=websecure"
-  - "traefik.http.routers.SERVICE.tls=true"
-  - "traefik.http.routers.SERVICE.tls.certresolver=letsencrypt"
-  - "traefik.http.services.SERVICE.loadbalancer.server.port=80" # порт внутри контейнера
+  - "traefik.http.routers.myservice.rule=Host(`example.com`)"
+  - "traefik.http.routers.myservice.entrypoints=websecure"
+  - "traefik.http.routers.myservice.tls=true"
+  - "traefik.http.routers.myservice.tls.certresolver=letsencrypt"
+  - "traefik.http.services.myservice.loadbalancer.server.port=80"
 ```
 
-Заменяйте `SERVICE` на уникальное имя. Для нескольких доменов используйте `Host(`a.com`) || Host(`b.com`)`.
+Replace `myservice` and `example.com` accordingly. For multiple domains use `Host(`a.com`) || Host(`b.com`)`.
 
-## 5 — TLS / Let's Encrypt
-- Для тестирования используйте staging ACME (в `traefik.yml`): он не даёт rate-limit проблем.
-- Для production удалите staging CA и используйте `https://acme-v02.api.letsencrypt.org/directory`.
-- Убедитесь, что `acme.json` защищён (chmod 600).
+## Dashboard security
+- Prefer hostname-based access (set `DASHBOARD_HOST`) with HTTPS + BasicAuth and/or IP allowlist.
+- Avoid publishing Traefik's port 8080 directly on the host unless behind extra controls.
 
-Пример: дать права и создать файл:
+## TLS / Let's Encrypt notes
+- For testing use the staging ACME server to avoid rate limits. For production use the real CA.
+- Traefik is configured to use `/certs/acme.json` inside the container; `CERTS_DIR` controls the host path.
 
-```bash
-mkdir -p ./letsencrypt
-touch ./letsencrypt/acme.json
-chmod 600 ./letsencrypt/acme.json
-```
+## Common issues & troubleshooting
+- ACME fails: verify DNS, port 80 accessibility, and that no upstream proxy blocks ACME challenges.
+- Routing 404: ensure the service is attached to Traefik's network and labels are correct.
+- Redirect loops: check app-level redirects and Traefik middlewares.
 
-## 6 — Локальная разработка и тестирование
-- Для локального тестирования можно добавить записи в `hosts` на вашей машине:
-
-```
-YOUR_SERVER_IP example.com
-```
-
-Note: Let's Encrypt не будет работать для `localhost` или IP; используйте staging или mkcert для локальных тестов.
-
-## 7 — Production чеклист (универсальный)
-- Настроить и проверить DNS
-- Проверить открытые порты 80/443
-- Установить правильный email для ACME
-- Резервная копия `acme.json`
-- Настроить резервный доступ к dashboard (BasicAuth + IP allowlist)
-
-## 8 — Частые проблемы и советы
-- ACME не получает сертификат: проверьте DNS, доступность порта 80 и отсутствие прокси перед сервером.
-- Контейнер не доступен: убедитесь, что сервис присоединён к сети `traefik` и label с правильным портом.
-- Too many redirects: проверьте редиректы на уровне приложения и middlewares в Traefik.
-
-## 9 — Примеры (коротко)
-
-- Добавление nginx сайта:
-
-```yaml
-services:
-  web:
-    image: nginx:alpine
-    networks:
-      - traefik
-    volumes:
-      - ./html:/usr/share/nginx/html:ro
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.web.rule=Host(`example.com`)"
-      - "traefik.http.routers.web.entrypoints=websecure"
-      - "traefik.http.routers.web.tls=true"
-      - "traefik.http.routers.web.tls.certresolver=letsencrypt"
-      - "traefik.http.services.web.loadbalancer.server.port=80"
-
-networks:
-  traefik:
-    external: true
-```
-
-## 10 — Как адаптировать для разных серверов
-- Публичный VPS: убедитесь, что провайдер не блокирует 80/443 (иногда нужно опустить cloud firewall).
-- Сервер в облаке: настройте security group/Network ACL для 80/443.
-- Локальная машина или NAT: пробросьте порты с роутера или используйте tunneling (ngrok, cloudflared) для тестирования.
-
-## 11 — Валидация изменений
-- После редактирования `docker-compose.yml` и `config/traefik.yml` всегда перезапускайте Traefik и смотрите логи:
+## Validation and runtime checks
+After configuration changes, restart Traefik and follow logs:
 
 ```bash
 docker compose up -d
 docker compose logs -f traefik
 ```
 
-## 12 — Доп. ресурсы
-- Traefik docs: https://doc.traefik.io/traefik/
-- Docker provider: https://doc.traefik.io/traefik/providers/docker/
+## Systemd (optional)
+An example unit exists at `systemd/traefik.service`. Edit `WorkingDirectory` and verify `docker`/`docker compose` availability before enabling.
 
----
+## Local development vs Production setup
 
-Если хотите, могу дополнительно:
+This repository includes a **conditional setup** that works both locally (with `.localhost` domains) and in production (with public domains and Let's Encrypt):
 
-Готов продолжать — скажите, какие дополнения нужны.
+### Local Development (default)
+- `DASHBOARD_HOST=dashboard.docker.localhost`
+- Dashboard runs on **HTTP** (port 8080) — no ACME certificate requests
+- `docker-compose.override.yml` automatically overrides the dashboard router to use the `web` entrypoint
+- Access: `http://dashboard.docker.localhost:8080` (with BasicAuth)
+- No SSL errors or ACME rejections
 
-## Пример systemd unit (готовый файл)
-Ниже — простой systemd unit для управления Traefik через `docker compose`. Файл добавлён в репозиторий как `systemd/traefik.service`.
+**To use locally:**
+1. Keep `docker-compose.override.yml` in the repository
+2. Edit `.env` to set `DASHBOARD_HOST=dashboard.docker.localhost` (or any `.localhost` domain)
+3. Run: `docker compose up -d`
 
-Перед использованием:
-- Проверьте путь в `WorkingDirectory` (по умолчанию `/home/debian/proxy`) и при необходимости измените.
-- Убедитесь, что путь к `docker` и `docker compose` совпадает с системой (`/usr/bin/docker` обычно корректно).
+### Production Deployment (public domain)
+- `DASHBOARD_HOST=dashboard.example.com` (replace with your real domain)
+- Dashboard runs on **HTTPS** with Let's Encrypt certificates
+- Delete or rename `docker-compose.override.yml` so the main compose file (with TLS + certresolver) is used
+- Access: `https://dashboard.example.com` (with BasicAuth)
+- Certificates auto-renew via ACME
 
-Содержимое примера `systemd/traefik.service`:
+**To switch to production:**
+1. Edit `.env`: set `DASHBOARD_HOST=dashboard.example.com` and `LETSENCRYPT_EMAIL=you@example.com`
+2. Delete `docker-compose.override.yml`: `rm docker-compose.override.yml`
+3. Ensure ports 80/443 are open and DNS points to your server
+4. Run: `docker compose up -d`
 
-```
-[Unit]
-Description=Traefik (Docker Compose)
-Documentation=https://doc.traefik.io/traefik/
-Requires=docker.service
-After=docker.service network-online.target
-Wants=network-online.target
-
-[Service]
-Type=oneshot
-RemainAfterExit=yes
-WorkingDirectory=/home/debian/proxy
-Environment=COMPOSE_PROJECT_NAME=traefik
-ExecStart=/usr/bin/docker compose -f docker-compose.yml up -d
-ExecStop=/usr/bin/docker compose -f docker-compose.yml down --remove-orphans
-TimeoutStartSec=0
-
-[Install]
-WantedBy=multi-user.target
-```
-
-Как включить и запустить:
-
-```bash
-# скопируйте или отредактируйте unit в /etc/systemd/system/traefik.service
-sudo cp systemd/traefik.service /etc/systemd/system/traefik.service
-
-# перечитать конфигурацию systemd
-sudo systemctl daemon-reload
-
-# включить при загрузке и запустить
-sudo systemctl enable --now traefik.service
-
-# посмотреть статус и логи
-sudo systemctl status traefik.service
-sudo journalctl -u traefik.service -f
-```
-
-Советы:
-- Если вы часто редактируете `docker-compose.yml`, после изменений используйте `sudo systemctl restart traefik.service`.
-- Для безопасного использования в production: убедитесь, что `acme.json` и конфиги имеют правильные права (например, chmod 600) и что доступ к dashboard ограничен.
-
-
+### How it works
+- `docker-compose.yml` (main file) always defines the dashboard with HTTPS + Let's Encrypt
+- `docker-compose.override.yml` (optional) overrides the dashboard labels to use HTTP instead
+- Docker Compose automatically merges override files, so you can switch setups without editing compose files
+- This is a standard Docker Compose pattern; see [Compose override docs](https://docs.docker.com/compose/compose-file/11-extension/)

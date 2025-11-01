@@ -1,11 +1,11 @@
-# Traefik Static Configuration
+# Traefik static configuration
 
-# API и Dashboard
+# API and Dashboard
 api:
   dashboard: true
-  insecure: true  # Разрешить HTTP доступ на 8080 для управления
+  insecure: true  # Allow HTTP access on port 8080 for management (set to false in production)
 
-# Entry Points
+# Entry points
 entryPoints:
   web:
     address: ":80"
@@ -20,26 +20,26 @@ entryPoints:
 providers:
   docker:
     endpoint: "unix:///var/run/docker.sock"
-    exposedByDefault: false  # Только контейнеры с traefik.enable=true
+    exposedByDefault: false  # Only containers with traefik.enable=true will be exposed
     network: traefik
 
-# Let's Encrypt Configuration
+# Let's Encrypt (ACME) configuration
 certificatesResolvers:
   letsencrypt:
     acme:
-      storage: /letsencrypt/acme.json
-      # Используйте httpChallenge для проверки
+  storage: /certs/acme.json
+      # Use httpChallenge (HTTP-01) for validation
       httpChallenge:
         entryPoint: web
-      # Для production закомментируйте следующую строку:
-      # caServer: https://acme-staging-v02.api.letsencrypt.org/directory
+      # When testing, you can point to Let's Encrypt staging CA. For production use the default CA
+      caServer: https://acme-staging-v02.api.letsencrypt.org/directory
 
 # Logging
 log:
   level: INFO
   format: common
 
-# Access Logs
+# Access logs
 accessLog:
   format: common
   bufferingSize: 100
