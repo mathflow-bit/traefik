@@ -83,16 +83,37 @@ chmod 600 "${CERTS_DIR:-./certs}/acme.json"
 Do not commit `acme.json` to git. Keep backups and secure file ownership.
 
 ## How to add a site
-Attach the service to the Traefik network and add labels in its Compose file:
+Attach the service to the Traefik network and add labels in its Compose file.
+
+Note: if you use an external Docker network for Traefik (commonly named `traefik`), each service must declare and attach to that external network in its Compose file. This ensures the Traefik container can see and route to your service. Example (add this to the service Compose file):
 
 ```yaml
-labels:
-  - "traefik.enable=true"
-  - "traefik.http.routers.myservice.rule=Host(`example.com`)"
-  - "traefik.http.routers.myservice.entrypoints=websecure"
-  - "traefik.http.routers.myservice.tls=true"
-  - "traefik.http.routers.myservice.tls.certresolver=letsencrypt"
-  - "traefik.http.services.myservice.loadbalancer.server.port=80"
+networks:
+  traefik:
+    external: true
+```
+
+If your service's Compose file doesn't include the `networks` section, add it at the top-level and reference the `traefik` network under the service.
+
+Full example (service Compose file) — copy this into your service's `docker-compose.yml` to attach it to the external `traefik` network and expose it via Traefik:
+
+```yaml
+services:
+  myservice:
+    image: nginx:alpine
+    networks:
+      - traefik
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.myservice.rule=Host(`example.com`)"
+      - "traefik.http.routers.myservice.entrypoints=websecure"
+      - "traefik.http.routers.myservice.tls=true"
+      - "traefik.http.routers.myservice.tls.certresolver=letsencrypt"
+      - "traefik.http.services.myservice.loadbalancer.server.port=80"
+
+networks:
+  traefik:
+    external: true
 ```
 
 Replace `myservice` and `example.com` accordingly. For multiple domains use `Host(`a.com`) || Host(`b.com`)`.
