@@ -3,7 +3,7 @@
 # API and Dashboard
 api:
   dashboard: true
-  insecure: true  # Allow HTTP access on port 8080 for management (set to false in production)
+  insecure: true
 
 # Entry points
 entryPoints:
@@ -12,26 +12,21 @@ entryPoints:
 
   websecure:
     address: ":443"
-    http:
-      tls:
-        certResolver: letsencrypt
 
 # Providers
 providers:
   docker:
     endpoint: "unix:///var/run/docker.sock"
-    exposedByDefault: false  # Only containers with traefik.enable=true will be exposed
-    network: traefik
+    exposedByDefault: false
+    watch: true
 
 # Let's Encrypt (ACME) configuration
 certificatesResolvers:
   letsencrypt:
     acme:
-  storage: /certs/acme.json
-      # Use httpChallenge (HTTP-01) for validation
+      storage: /certs/acme.json
       httpChallenge:
         entryPoint: web
-      # When testing, you can point to Let's Encrypt staging CA. For production use the default CA
       caServer: https://acme-staging-v02.api.letsencrypt.org/directory
 
 # Logging

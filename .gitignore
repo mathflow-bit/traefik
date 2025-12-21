@@ -6,9 +6,6 @@ acme.json
 .env
 *.env
 
-# Docker
-docker-compose.override.yml
-
 # OS / editors
 .DS_Store
 .vscode/

@@ -1,0 +1,33 @@
+# docker-compose.override.yml
+# This file is ONLY used for local development (when DASHBOARD_HOST contains .localhost or is 127.0.0.1/localhost).
+# It overrides the websecure dashboard configuration from docker-compose.yml,
+# allowing Traefik dashboard to be accessed over HTTP without requesting Let's Encrypt certificates.
+#
+# For production (public domains), delete or rename this file and use docker-compose.yml as-is.
+# The docker-compose.override.yml pattern is automatically picked up by 'docker compose' CLI.
+
+services:
+  traefik:
+    # Remove the HTTP-to-HTTPS redirect entrypoints configuration from docker-compose.yml
+    # This allows plain HTTP access for local development
+    command:
+      - "--api.insecure=false"
+      - "--api.dashboard=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--providers.docker.network=traefik"
+      - "--entryPoints.web.address=:80"
+      - "--entryPoints.websecure.address=:443"
+      - "--entryPoints.websecure.http.tls=true"
+      # NOTE: HTTP→HTTPS redirect is NOT configured here for local dev
+      # For production, delete this file to use the redirect from docker-compose.yml
+      - "--certificatesresolvers.letsencrypt.acme.email=${LETSENCRYPT_EMAIL}"
+      - "--certificatesresolvers.letsencrypt.acme.storage=/certs/acme.json"
+      - "--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web"
+    labels:
+      # Override the dashboard router to use HTTP (web) instead of HTTPS (websecure)
+      # This prevents ACME errors for non-public domains like dashboard.docker.localhost
+      - "traefik.http.routers.dashboard.entrypoints=web"
+      - "traefik.http.routers.dashboard.service=api@internal"
+      - "traefik.http.routers.dashboard.middlewares=auth"
+      # Note: tls and certresolver labels are removed, so no ACME is attempted
