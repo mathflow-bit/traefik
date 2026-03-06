@@ -18,6 +18,8 @@ services:
       - "--providers.docker.network=traefik"
       - "--entryPoints.web.address=:80"
       - "--entryPoints.websecure.address=:443"
+      - "--entryPoints.web.http.sanitizePath=false"
+      - "--entryPoints.websecure.http.sanitizePath=false"
       - "--entryPoints.websecure.http.tls=true"
       # NOTE: HTTP→HTTPS redirect is NOT configured here for local dev
       # For production, delete this file to use the redirect from docker-compose.yml

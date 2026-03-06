@@ -19,6 +19,8 @@ services:
       - "--providers.docker.network=traefik"
       - "--entryPoints.web.address=:80"
       - "--entryPoints.websecure.address=:443"
+      - "--entryPoints.web.http.sanitizePath=false"
+      - "--entryPoints.websecure.http.sanitizePath=false"
       - "--entryPoints.websecure.http.tls=true"
       - "--entryPoints.web.http.redirections.entryPoint.to=websecure"
       - "--entryPoints.web.http.redirections.entryPoint.scheme=https"
