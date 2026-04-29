@@ -5,12 +5,12 @@ services:
     restart: unless-stopped
     security_opt:
       - no-new-privileges:true
+      - label:disable
     networks:
       - traefik
     ports:
-      - "80:80"
-      - "443:443"
-      - "${DASHBOARD_PORT_EXTERNAL:-8080}:8080"
+      - "${WEB_PORT_EXTERNAL:-8080}:80"
+      - "${WEBSECURE_PORT_EXTERNAL:-8443}:443"
     command:
       - "--api.insecure=false"
       - "--api.dashboard=true"
@@ -29,7 +29,7 @@ services:
       - "--certificatesresolvers.letsencrypt.acme.storage=/certs/acme.json"
       - "--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web"
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ${XDG_RUNTIME_DIR}/podman/podman.sock:/var/run/docker.sock:ro,z
       - ${CERTS_DIR:-./certs}:/certs
     labels:
       - "traefik.enable=true"

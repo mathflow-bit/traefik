@@ -27,9 +27,12 @@ services:
       - "--certificatesresolvers.letsencrypt.acme.storage=/certs/acme.json"
       - "--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web"
     labels:
-      # Override the dashboard router to use HTTP (web) instead of HTTPS (websecure)
-      # This prevents ACME errors for non-public domains like dashboard.docker.localhost
+      # Override the dashboard router to use HTTP (web) instead of HTTPS (websecure).
+      # Labels are MERGED by Compose, not replaced — so we must explicitly override
+      # tls and certresolver from docker-compose.yml to prevent ACME attempts on
+      # non-public .localhost domains.
       - "traefik.http.routers.dashboard.entrypoints=web"
       - "traefik.http.routers.dashboard.service=api@internal"
       - "traefik.http.routers.dashboard.middlewares=auth"
-      # Note: tls and certresolver labels are removed, so no ACME is attempted
+      - "traefik.http.routers.dashboard.tls=false"
+      - "traefik.http.routers.dashboard.tls.certresolver="
